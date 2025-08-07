@@ -15,6 +15,9 @@ This is a dynamic React-based Pickleball tournament manager that supports flexib
 ### 2. **Game Format Options**
 - Select point limit per game (e.g., 7, 11).
 - Auto-balance breaks (e.g., one player sits per game in 2v2 if odd players).
+- If more than 4 players, Each player plays with every other player as a teammate in a balanced mannar. 
+- Each player plays against every other player.
+- Each player gets balanced breaks.
 
 ### 3. **Game Schedule Generator**
 - Automatically generates a balanced schedule:
@@ -24,14 +27,14 @@ This is a dynamic React-based Pickleball tournament manager that supports flexib
 
 ### 4. **Match Interface**
 - Display current game: who is playing, who is sitting
-- Score input for each team
+- Score input for each team, (I guess we can just select which team won, it should add 3 points to winning teams players)
 - "Next Game" button to continue
 
 ### 5. **Leaderboard System**
 - Track:
   - Games played per player
-  - Wins/losses per player
-  - Total points (based on team wins)
+  - Wins/losses per player (winning team players gets 3 points each.)
+  - Total points per player (based on team wins)
   - Optional point differential or advanced stats
 
 ### 6. **Export & Share**
