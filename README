@@ -1,0 +1,89 @@
+# 🏓 Pickleball Tournament Web App
+
+This is a dynamic React-based Pickleball tournament manager that supports flexible player counts and team formats. It helps generate fair game rotations, tracks scores, and presents a final leaderboard.
+
+---
+
+## ✅ Features
+
+### 1. **Player Setup**
+- Ask the user how many players are participating.
+- Accept player names.
+- Allow choosing between `1v1` or `2v2` format.
+- Validate compatible numbers (e.g., 2+ for 1v1, 4+ for 2v2 with rotation).
+
+### 2. **Game Format Options**
+- Select point limit per game (e.g., 7, 11).
+- Auto-balance breaks (e.g., one player sits per game in 2v2 if odd players).
+
+### 3. **Game Schedule Generator**
+- Automatically generates a balanced schedule:
+  - Rotating partners and opponents
+  - Fair distribution of sit-outs
+  - Supports uneven player counts
+
+### 4. **Match Interface**
+- Display current game: who is playing, who is sitting
+- Score input for each team
+- "Next Game" button to continue
+
+### 5. **Leaderboard System**
+- Track:
+  - Games played per player
+  - Wins/losses per player
+  - Total points (based on team wins)
+  - Optional point differential or advanced stats
+
+### 6. **Export & Share**
+- Export final leaderboard and game schedule to PDF
+- Option to generate a shareable link or downloadable file
+
+---
+
+## ⚙️ Tech Stack
+- React (with Hooks)
+- Tailwind CSS for styling
+- ShadCN UI components
+- Vercel/Netlify-compatible for deployment
+
+---
+
+## 🔧 Future Enhancements
+- Support for saving session to localStorage
+- MVP tracking / Player notes
+- Undo/redo functionality
+- Night mode
+- User authentication for multi-device tracking
+
+---
+
+## 🏁 Getting Started (Planned)
+```bash
+npm install
+npm run dev
+```
+
+You can deploy this to [Netlify](https://netlify.com) or [Vercel](https://vercel.com) for live use.
+
+---
+
+## 📂 File Structure (Planned)
+```
+/components
+  - PlayerForm.tsx
+  - MatchDisplay.tsx
+  - ScoreInput.tsx
+  - Leaderboard.tsx
+/utils
+  - scheduler.ts
+  - scoring.ts
+/pages
+  - index.tsx
+```
+
+---
+
+## 💡 Tournament Logic
+- Based on round-robin and combinatorial rotation
+- Adapts to number of players and selected format
+- Prevents repeated teams and ensures fairness
