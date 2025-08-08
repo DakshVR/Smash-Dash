@@ -1,4 +1,3 @@
-// Calculate minimum games needed for balanced play
 export const calculateMinGames = (players, format) => {
   if (format === "1v1") {
     // Each player should play against every other player at least once
