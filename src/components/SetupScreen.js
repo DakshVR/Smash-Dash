@@ -1,6 +1,9 @@
-// SetupScreen.js - Fixed version with better state management
-import React, { useEffect } from "react";
-import { calculateMinGames, getGameOptions } from "../utils/tournamentUtils";
+import React, { useEffect, useCallback } from "react";
+import {
+  calculateMinGamesPerPlayer,
+  getGamesPerPlayerOptions,
+  calculateTotalGames,
+} from "../utils/tournamentUtils";
 import "../styles/SetupScreen.css";
 
 const SetupScreen = ({
@@ -12,26 +15,40 @@ const SetupScreen = ({
   setPlayerNames,
   pointLimit,
   setPointLimit,
-  maxGames,
-  setMaxGames,
+  gamesPerPlayer,
+  setGamesPerPlayer,
   handleGenerateSchedule,
 }) => {
+  // Use useCallback to memoize the function and prevent infinite re-renders
+  const updatePlayerNames = useCallback(
+    (newNumPlayers) => {
+      // Only update player names if we have a valid number of players
+      if (newNumPlayers && newNumPlayers > 0 && !isNaN(newNumPlayers)) {
+        const minPlayers = gameFormat === "1v1" ? 3 : 4;
+
+        // Only proceed if the number is within valid range
+        if (newNumPlayers >= minPlayers && newNumPlayers <= 10) {
+          const newNames = Array(newNumPlayers)
+            .fill("")
+            .map((_, i) => {
+              // Keep existing names or create default names
+              return playerNames[i] || `Player ${i + 1}`;
+            });
+
+          // Only update if the array length has changed
+          if (newNames.length !== playerNames.length) {
+            setPlayerNames(newNames);
+          }
+        }
+      }
+    },
+    [playerNames, setPlayerNames, gameFormat]
+  );
+
   // Better state management for player names
   useEffect(() => {
-    if (numPlayers && numPlayers > 0) {
-      const newNames = Array(numPlayers)
-        .fill("")
-        .map((_, i) => {
-          // Keep existing names or create default names
-          return playerNames[i] || `Player ${i + 1}`;
-        });
-
-      // Only update if the array length has changed
-      if (newNames.length !== playerNames.length) {
-        setPlayerNames(newNames);
-      }
-    }
-  }, [numPlayers]); // Remove playerNames and setPlayerNames from dependencies to avoid infinite loops
+    updatePlayerNames(numPlayers);
+  }, [numPlayers, updatePlayerNames]);
 
   // Handle player name change
   const handlePlayerNameChange = (index, value) => {
@@ -42,30 +59,56 @@ const SetupScreen = ({
 
   // Handle number of players change
   const handleNumPlayersChange = (value) => {
+    // Allow empty string (for clearing the input)
+    if (value === "" || value === null || value === undefined) {
+      setNumPlayers("");
+      return;
+    }
+
     const newNum = parseInt(value);
-    if (
-      !isNaN(newNum) &&
-      newNum >= (gameFormat === "1v1" ? 3 : 4) &&
-      newNum <= 10
-    ) {
+
+    // Allow any valid number input, even if outside range (for typing flexibility)
+    if (!isNaN(newNum)) {
       setNumPlayers(newNum);
     }
   };
 
-  // Calculate valid game options
-  const gameOptions = React.useMemo(() => {
-    if (numPlayers && numPlayers > 0) {
-      return getGameOptions(numPlayers, gameFormat);
+  // Calculate valid games per player options
+  const gamesPerPlayerOptions = React.useMemo(() => {
+    if (numPlayers && numPlayers > 0 && !isNaN(numPlayers)) {
+      const minPlayers = gameFormat === "1v1" ? 3 : 4;
+      if (numPlayers >= minPlayers && numPlayers <= 10) {
+        return getGamesPerPlayerOptions(numPlayers, gameFormat);
+      }
     }
-    return [10]; // Default fallback
+    return [3]; // Default fallback
   }, [numPlayers, gameFormat]);
 
-  // Update maxGames if current selection is invalid
+  // Update gamesPerPlayer if current selection is invalid
   useEffect(() => {
-    if (gameOptions.length > 0 && !gameOptions.includes(maxGames)) {
-      setMaxGames(gameOptions[0]);
+    if (
+      gamesPerPlayerOptions.length > 0 &&
+      !gamesPerPlayerOptions.includes(gamesPerPlayer)
+    ) {
+      setGamesPerPlayer(gamesPerPlayerOptions[0]);
     }
-  }, [gameOptions, maxGames, setMaxGames]);
+  }, [gamesPerPlayerOptions, gamesPerPlayer, setGamesPerPlayer]);
+
+  // Calculate total games for display
+  const totalGames = React.useMemo(() => {
+    if (
+      numPlayers &&
+      gamesPerPlayer &&
+      !isNaN(numPlayers) &&
+      !isNaN(gamesPerPlayer)
+    ) {
+      const minPlayers = gameFormat === "1v1" ? 3 : 4;
+      if (numPlayers >= minPlayers && numPlayers <= 10) {
+        return calculateTotalGames(numPlayers, gamesPerPlayer, gameFormat);
+      }
+    }
+    return 0;
+  }, [numPlayers, gamesPerPlayer, gameFormat]);
 
   return (
     <div className="setup-screen">
@@ -137,31 +180,41 @@ const SetupScreen = ({
           </div>
 
           <div className="section">
-            <h3>🎲 Total Games</h3>
+            <h3>🎲 Games per Player</h3>
             <div className="min-games">
-              ⚡ Minimum:{" "}
-              {numPlayers > 0 ? calculateMinGames(numPlayers, gameFormat) : 0}{" "}
-              games ⚡
+              ⚡ Minimum for balanced play:{" "}
+              {numPlayers > 0 &&
+              !isNaN(numPlayers) &&
+              numPlayers >= (gameFormat === "1v1" ? 3 : 4) &&
+              numPlayers <= 10
+                ? calculateMinGamesPerPlayer(numPlayers, gameFormat)
+                : 0}{" "}
+              games per player ⚡
             </div>
             <select
-              value={maxGames}
-              onChange={(e) => setMaxGames(parseInt(e.target.value))}
+              value={gamesPerPlayer}
+              onChange={(e) => setGamesPerPlayer(parseInt(e.target.value))}
             >
-              {gameOptions.map((option) => (
+              {gamesPerPlayerOptions.map((option) => (
                 <option key={option} value={option}>
-                  🎲 {option} Games
+                  🎲 {option} Games per Player
                 </option>
               ))}
             </select>
+            {totalGames > 0 && (
+              <div className="total-games-info">
+                📊 Total tournament games: <strong>{totalGames}</strong>
+              </div>
+            )}
           </div>
 
           <button className="generate" onClick={handleGenerateSchedule}>
-            🚀 Generate Schedule ⚡
+            🚀 Generate Balanced Schedule ⚡
           </button>
         </div>
 
         <div className="bottom-msg">
-          🏓 Ready to play? Let&apos;s get started! 🏓
+          🏓 Every player will play exactly {gamesPerPlayer || 0} games! 🏓
         </div>
       </div>
     </div>
