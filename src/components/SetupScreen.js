@@ -1,7 +1,7 @@
+// SetupScreen.js - Fixed with proper performance optimizations
 import React, { useEffect, useCallback } from "react";
 import {
   calculateMinGamesPerPlayer,
-  getGamesPerPlayerOptions,
   calculateTotalGames,
 } from "../utils/tournamentUtils";
 import "../styles/SetupScreen.css";
@@ -28,21 +28,24 @@ const SetupScreen = ({
 
         // Only proceed if the number is within valid range
         if (newNumPlayers >= minPlayers && newNumPlayers <= 10) {
-          const newNames = Array(newNumPlayers)
-            .fill("")
-            .map((_, i) => {
-              // Keep existing names or create default names
-              return playerNames[i] || `Player ${i + 1}`;
-            });
+          setPlayerNames((currentNames) => {
+            const newNames = Array(newNumPlayers)
+              .fill("")
+              .map((_, i) => {
+                // Keep existing names (even if empty string) or create empty string for new slots
+                return currentNames[i] !== undefined ? currentNames[i] : "";
+              });
 
-          // Only update if the array length has changed
-          if (newNames.length !== playerNames.length) {
-            setPlayerNames(newNames);
-          }
+            // Only update if we need to change the array length
+            if (newNames.length !== currentNames.length) {
+              return newNames;
+            }
+            return currentNames;
+          });
         }
       }
     },
-    [playerNames, setPlayerNames, gameFormat]
+    [gameFormat, setPlayerNames] // Removed playerNames dependency
   );
 
   // Better state management for player names
@@ -50,49 +53,73 @@ const SetupScreen = ({
     updatePlayerNames(numPlayers);
   }, [numPlayers, updatePlayerNames]);
 
-  // Handle player name change
-  const handlePlayerNameChange = (index, value) => {
-    const newNames = [...playerNames];
-    newNames[index] = value;
-    setPlayerNames(newNames);
-  };
-
-  // Handle number of players change
-  const handleNumPlayersChange = (value) => {
-    // Allow empty string (for clearing the input)
-    if (value === "" || value === null || value === undefined) {
-      setNumPlayers("");
-      return;
+  // Initialize player names on first load if empty
+  useEffect(() => {
+    if (playerNames.length === 0 && numPlayers > 0) {
+      updatePlayerNames(numPlayers);
     }
+  }, [playerNames.length, numPlayers, updatePlayerNames]);
 
-    const newNum = parseInt(value);
+  // Handle player name change - optimized version
+  const handlePlayerNameChange = useCallback(
+    (index, value) => {
+      setPlayerNames((currentNames) => {
+        const newNames = [...currentNames];
+        newNames[index] = value;
+        return newNames;
+      });
+    },
+    [setPlayerNames]
+  );
 
-    // Allow any valid number input, even if outside range (for typing flexibility)
-    if (!isNaN(newNum)) {
-      setNumPlayers(newNum);
-    }
-  };
+  // Handle number of players change - optimized
+  const handleNumPlayersChange = useCallback(
+    (value) => {
+      // Allow empty string (for clearing the input)
+      if (value === "" || value === null || value === undefined) {
+        setNumPlayers("");
+        return;
+      }
 
-  // Calculate valid games per player options
-  const gamesPerPlayerOptions = React.useMemo(() => {
+      const newNum = parseInt(value);
+
+      // Allow any valid number input, even if outside range (for typing flexibility)
+      if (!isNaN(newNum)) {
+        setNumPlayers(newNum);
+      }
+    },
+    [setNumPlayers]
+  );
+
+  // Handle games per player change - optimized
+  const handleGamesPerPlayerChange = useCallback(
+    (value) => {
+      // Allow empty string (for clearing the input)
+      if (value === "" || value === null || value === undefined) {
+        setGamesPerPlayer("");
+        return;
+      }
+
+      const newNum = parseInt(value);
+
+      // Allow any positive number
+      if (!isNaN(newNum) && newNum > 0) {
+        setGamesPerPlayer(newNum);
+      }
+    },
+    [setGamesPerPlayer]
+  );
+
+  // Calculate minimum games per player (for reference only)
+  const minGamesPerPlayer = React.useMemo(() => {
     if (numPlayers && numPlayers > 0 && !isNaN(numPlayers)) {
       const minPlayers = gameFormat === "1v1" ? 3 : 4;
       if (numPlayers >= minPlayers && numPlayers <= 10) {
-        return getGamesPerPlayerOptions(numPlayers, gameFormat);
+        return calculateMinGamesPerPlayer(numPlayers, gameFormat);
       }
     }
-    return [3]; // Default fallback
+    return 3; // Default fallback
   }, [numPlayers, gameFormat]);
-
-  // Update gamesPerPlayer if current selection is invalid
-  useEffect(() => {
-    if (
-      gamesPerPlayerOptions.length > 0 &&
-      !gamesPerPlayerOptions.includes(gamesPerPlayer)
-    ) {
-      setGamesPerPlayer(gamesPerPlayerOptions[0]);
-    }
-  }, [gamesPerPlayerOptions, gamesPerPlayer, setGamesPerPlayer]);
 
   // Calculate total games for display
   const totalGames = React.useMemo(() => {
@@ -109,6 +136,29 @@ const SetupScreen = ({
     }
     return 0;
   }, [numPlayers, gamesPerPlayer, gameFormat]);
+
+  // Check if perfect balance is possible for 2v2
+  const balanceInfo = React.useMemo(() => {
+    if (
+      gameFormat === "2v2" &&
+      numPlayers &&
+      gamesPerPlayer &&
+      !isNaN(numPlayers) &&
+      !isNaN(gamesPerPlayer)
+    ) {
+      const totalPlayerGames = numPlayers * gamesPerPlayer;
+      const actualPlayerGames = totalGames * 4;
+
+      if (actualPlayerGames > totalPlayerGames) {
+        const extraGames = actualPlayerGames - totalPlayerGames;
+        return {
+          isPerfect: false,
+          message: `⚠️ Perfect balance not possible: ${extraGames} extra player-games will be distributed`,
+        };
+      }
+    }
+    return { isPerfect: true, message: "" };
+  }, [gameFormat, numPlayers, gamesPerPlayer, totalGames]);
 
   return (
     <div className="setup-screen">
@@ -151,11 +201,11 @@ const SetupScreen = ({
             <h3>📝 Player Names</h3>
             <div className="player-list">
               {playerNames.map((name, index) => (
-                <div key={index} className="player-input">
+                <div key={`player-${index}`} className="player-input">
                   <input
                     type="text"
                     placeholder={`Player ${index + 1}`}
-                    value={name}
+                    value={name || ""}
                     onChange={(e) =>
                       handlePlayerNameChange(index, e.target.value)
                     }
@@ -191,20 +241,21 @@ const SetupScreen = ({
                 : 0}{" "}
               games per player ⚡
             </div>
-            <select
-              value={gamesPerPlayer}
-              onChange={(e) => setGamesPerPlayer(parseInt(e.target.value))}
-            >
-              {gamesPerPlayerOptions.map((option) => (
-                <option key={option} value={option}>
-                  🎲 {option} Games per Player
-                </option>
-              ))}
-            </select>
+            <input
+              type="number"
+              min="1"
+              max="50"
+              value={gamesPerPlayer || ""}
+              onChange={(e) => handleGamesPerPlayerChange(e.target.value)}
+              placeholder={`Min: ${minGamesPerPlayer}`}
+            />
             {totalGames > 0 && (
               <div className="total-games-info">
                 📊 Total tournament games: <strong>{totalGames}</strong>
               </div>
+            )}
+            {!balanceInfo.isPerfect && (
+              <div className="balance-warning">{balanceInfo.message}</div>
             )}
           </div>
 

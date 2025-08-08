@@ -41,7 +41,19 @@ export const calculateTotalGames = (numPlayers, gamesPerPlayer, gameFormat) => {
     return Math.ceil((numPlayers * gamesPerPlayer) / 2);
   } else {
     // Each game involves 4 players
-    return Math.ceil((numPlayers * gamesPerPlayer) / 4);
+    const totalPlayerGames = numPlayers * gamesPerPlayer;
+    const totalGames = Math.ceil(totalPlayerGames / 4);
+
+    // Check if perfect balance is possible
+    const actualPlayerGames = totalGames * 4;
+    if (actualPlayerGames !== totalPlayerGames) {
+      // Perfect balance isn't possible - some players will get extra games
+      console.warn(
+        `Perfect balance not possible: ${numPlayers} players × ${gamesPerPlayer} games = ${totalPlayerGames} player-games, but ${totalGames} games × 4 players = ${actualPlayerGames} player-games`
+      );
+    }
+
+    return totalGames;
   }
 };
 

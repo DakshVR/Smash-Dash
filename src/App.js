@@ -27,13 +27,11 @@ const App = () => {
 
   // Initialize player names when number of players changes
   useEffect(() => {
-    if (numPlayers > 0) {
-      const names = Array(numPlayers)
-        .fill("")
-        .map((_, i) => playerNames[i] || `Player ${i + 1}`);
+    if (numPlayers > 0 && playerNames.length === 0) {
+      const names = Array(numPlayers).fill("");
       setPlayerNames(names);
     }
-  }, [numPlayers, playerNames]);
+  }, [numPlayers, playerNames.length, setPlayerNames]);
 
   // Generate schedule using the new balanced approach
   const handleGenerateSchedule = () => {
